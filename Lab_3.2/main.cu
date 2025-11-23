@@ -1,63 +1,77 @@
 
 
 #include <stdio.h>
-#include "support.h"
+#include <stdlib.h>
 #include "kernel.cu"
+#include "support.h"
 
-int main(int argc, char* argv[])
+int main (int argc, char *argv[])
 {
+
     Timer timer;
+    cudaError_t cuda_ret;
 
     // Initialize host variables ----------------------------------------------
 
     printf("\nSetting up the problem..."); fflush(stdout);
     startTime(&timer);
 
-	Matrix M_h, N_h, P_h; // M: filter, N: input image, P: output image
-	Matrix N_d, P_d;
-	unsigned imageHeight, imageWidth;
-	cudaError_t cuda_ret;
-	dim3 dim_grid, dim_block;
+    float *A_h, *B_h, *C_h;
+    float *A_d, *B_d, *C_d;
+    size_t A_sz, B_sz, C_sz;
+    unsigned matArow, matAcol;
+    unsigned matBrow, matBcol;
+    dim3 dim_grid, dim_block;
 
-	/* Read image dimensions */
     if (argc == 1) {
-        imageHeight = 600;
-        imageWidth = 1000;
+        matArow = 1000;
+        matAcol = matBrow = 1000;
+        matBcol = 1000;
     } else if (argc == 2) {
-        imageHeight = atoi(argv[1]);
-        imageWidth = atoi(argv[1]);
-    } else if (argc == 3) {
-        imageHeight = atoi(argv[1]);
-        imageWidth = atoi(argv[2]);
+        matArow = atoi(argv[1]);
+        matAcol = matBrow = atoi(argv[1]);
+        matBcol = atoi(argv[1]);
+    } else if (argc == 4) {
+        matArow = atoi(argv[1]);
+        matAcol = matBrow = atoi(argv[2]);
+        matBcol = atoi(argv[3]);
     } else {
         printf("\n    Invalid input parameters!"
-           "\n    Usage: ./convolution          # Image is 600 x 1000"
-           "\n    Usage: ./convolution <m>      # Image is m x m"
-           "\n    Usage: ./convolution <m> <n>  # Image is m x n"
-           "\n");
+      "\n    Usage: ./sgemm-tiled                # All matrices are 1000 x 1000"
+      "\n    Usage: ./sgemm-tiled <m>            # All matrices are m x m"
+      "\n    Usage: ./sgemm-tiled <m> <k> <n>    # A: m x k, B: k x n, C: m x n"
+      "\n");
         exit(0);
     }
 
-	/* Allocate host memory */
-	M_h = allocateMatrix(FILTER_SIZE, FILTER_SIZE);
-	N_h = allocateMatrix(imageHeight, imageWidth);
-	P_h = allocateMatrix(imageHeight, imageWidth);
+    A_sz = matArow*matAcol;
+    B_sz = matBrow*matBcol;
+    C_sz = matArow*matBcol;
 
-	/* Initialize filter and images */
-	initMatrix(M_h);
-	initMatrix(N_h);
+    A_h = (float*) malloc( sizeof(float)*A_sz );
+    for (unsigned int i=0; i < A_sz; i++) { A_h[i] = (rand()%100)/100.00; }
+
+    B_h = (float*) malloc( sizeof(float)*B_sz );
+    for (unsigned int i=0; i < B_sz; i++) { B_h[i] = (rand()%100)/100.00; }
+
+    C_h = (float*) malloc( sizeof(float)*C_sz );
 
     stopTime(&timer); printf("%f s\n", elapsedTime(timer));
-    printf("    Image: %u x %u\n", imageHeight, imageWidth);
-    printf("    Mask: %u x %u\n", FILTER_SIZE, FILTER_SIZE);
+    printf("    A: %u x %u\n    B: %u x %u\n    C: %u x %u\n", matArow, matAcol,
+        matBrow, matBcol, matArow, matBcol);
 
     // Allocate device variables ----------------------------------------------
 
     printf("Allocating device variables..."); fflush(stdout);
     startTime(&timer);
 
-	N_d = allocateDeviceMatrix(imageHeight, imageWidth);
-	P_d = allocateDeviceMatrix(imageHeight, imageWidth);
+    //INSERT CODE HERE
+
+
+
+
+
+
 
     cudaDeviceSynchronize();
     stopTime(&timer); printf("%f s\n", elapsedTime(timer));
@@ -67,11 +81,8 @@ int main(int argc, char* argv[])
     printf("Copying data from host to device..."); fflush(stdout);
     startTime(&timer);
 
-	/* Copy image to device global memory */
-	copyToDeviceMatrix(N_d, N_h);
-
-	/* Copy mask to device constant memory */
     //INSERT CODE HERE
+
 
 
 
@@ -79,24 +90,14 @@ int main(int argc, char* argv[])
     cudaDeviceSynchronize();
     stopTime(&timer); printf("%f s\n", elapsedTime(timer));
 
-    // Launch kernel ----------------------------------------------------------
+    // Launch kernel using standard sgemm interface ---------------------------
     printf("Launching kernel..."); fflush(stdout);
     startTime(&timer);
+    basicSgemm('N', 'N', matArow, matBcol, matBrow, 1.0f, \
+		A_d, matArow, B_d, matBrow, 0.0f, C_d, matBrow);
 
-    //INSERT CODE HERE
-
-
-
-
-
-
-
-
-
-	cuda_ret = cudaDeviceSynchronize();
-	if(cuda_ret != cudaSuccess) FATAL("Unable to launch/execute kernel");
-
-    cudaDeviceSynchronize();
+    cuda_ret = cudaDeviceSynchronize();
+	if(cuda_ret != cudaSuccess) FATAL("Unable to launch kernel");
     stopTime(&timer); printf("%f s\n", elapsedTime(timer));
 
     // Copy device variables from host ----------------------------------------
@@ -104,7 +105,9 @@ int main(int argc, char* argv[])
     printf("Copying data from device to host..."); fflush(stdout);
     startTime(&timer);
 
-    copyFromDeviceMatrix(P_h, P_d);
+    //INSERT CODE HERE
+
+
 
     cudaDeviceSynchronize();
     stopTime(&timer); printf("%f s\n", elapsedTime(timer));
@@ -113,16 +116,21 @@ int main(int argc, char* argv[])
 
     printf("Verifying results..."); fflush(stdout);
 
-    verify(M_h, N_h, P_h);
+    verify(A_h, B_h, C_h, matArow, matAcol, matBcol);
+
 
     // Free memory ------------------------------------------------------------
 
-	freeMatrix(M_h);
-	freeMatrix(N_h);
-	freeMatrix(P_h);
-	freeDeviceMatrix(N_d);
-	freeDeviceMatrix(P_d);
+    free(A_h);
+    free(B_h);
+    free(C_h);
 
-	return 0;
+    //INSERT CODE HERE
+
+
+
+
+    return 0;
+
 }
 

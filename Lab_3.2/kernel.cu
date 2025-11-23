@@ -1,17 +1,28 @@
+#include <stdio.h>
+
+#define TILE_SIZE 16
+
+__global__ void mysgemm(int m, int n, int k, const float *A, const float *B, float* C) {
+
+    /********************************************************************
+     *
+     * Compute C = A x B
+     *   where A is a (m x k) matrix
+     *   where B is a (k x n) matrix
+     *   where C is a (m x n) matrix
+     *
+     * Use shared memory for tiling
+     *
+     ********************************************************************/
+
+    // INSERT KERNEL CODE HERE
 
 
-__constant__ float M_c[FILTER_SIZE][FILTER_SIZE];
 
-__global__ void convolution(Matrix N, Matrix P)
-{
-	/********************************************************************
-	Determine input and output indexes of each thread
-	Load a tile of the input image to shared memory
-	Apply the filter on the input image tile
-	Write the compute values to the output image at the correct indexes
-	********************************************************************/
 
-    //INSERT KERNEL CODE HERE
+
+
+
 
 
 
@@ -40,3 +51,44 @@ __global__ void convolution(Matrix N, Matrix P)
 
 
 }
+
+void basicSgemm(char transa, char transb, int m, int n, int k, float alpha, const float *A, int lda, const float *B, int ldb, float beta, float *C, int ldc)
+{
+    if ((transa != 'N') && (transa != 'n')) {
+	printf("unsupported value of 'transa'\n");
+    	return;
+    }
+
+    if ((transb != 'N') && (transb != 'n')) {
+	printf("unsupported value of 'transb'\n");
+	return;
+    }
+
+    if ((alpha - 1.0f > 1e-10) || (alpha - 1.0f < -1e-10)) {
+	printf("unsupported value of alpha\n");
+	return;
+    }
+
+    if ((beta - 0.0f > 1e-10) || (beta - 0.0f < -1e-10)) {
+	printf("unsupported value of beta\n");
+	return;
+    }
+
+    // Initialize thread block and kernel grid dimensions ---------------------
+
+    const unsigned int BLOCK_SIZE = TILE_SIZE;
+
+    //INSERT CODE HERE
+
+
+
+    // Invoke CUDA kernel -----------------------------------------------------
+
+    //INSERT CODE HERE
+
+
+
+
+}
+
+

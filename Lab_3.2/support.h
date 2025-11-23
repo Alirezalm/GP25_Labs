@@ -10,29 +10,17 @@ typedef struct {
     struct timeval endTime;
 } Timer;
 
-// Matrix Structure declaration
-typedef struct {
-    unsigned int width;
-    unsigned int height;
-    unsigned int pitch;
-    float* elements;
-} Matrix;
-
-#define FILTER_SIZE 5
-#define TILE_SIZE 12
-#define BLOCK_SIZE (TILE_SIZE + FILTER_SIZE - 1)
-
-Matrix allocateMatrix(unsigned height, unsigned width);
-void initMatrix(Matrix mat);
-Matrix allocateDeviceMatrix(unsigned height, unsigned width);
-void copyToDeviceMatrix(Matrix dst, Matrix src);
-void copyFromDeviceMatrix(Matrix dst, Matrix src);
-void verify(Matrix M, Matrix  N, Matrix P);
-void freeMatrix(Matrix mat);
-void freeDeviceMatrix(Matrix mat);
+#ifdef __cplusplus
+extern "C" {
+#endif
+void verify(float *A, float *B, float *C, unsigned int m, unsigned int k,
+  unsigned int n);
 void startTime(Timer* timer);
 void stopTime(Timer* timer);
 float elapsedTime(Timer timer);
+#ifdef __cplusplus
+}
+#endif
 
 #define FATAL(msg, ...) \
     do {\
